@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:se="clr-namespace:ShapeEditor"
         xmlns:local="clr-namespace:CropImage"
         mc:Ignorable="d"
-        Title="MainWindow" Height="468.114" Width="706.568">
+        Title="WPF Image Editor" Height="768" Width="1024">
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -17,10 +18,12 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Border Grid.Column="0" BorderThickness="1" BorderBrush="Tomato" Margin="10">
-                <Canvas x:Name="ui_canvas" MouseDown="ui_canvas_MouseDown"/>
+                <Canvas x:Name="ui_input_canvas" MouseDown="ui_canvas_MouseDown" Background="SeaGreen"/>
             </Border>
             <Border Grid.Column="1" BorderThickness="1" BorderBrush="Tomato" Margin="10">
-                <Canvas x:Name="ui_result"/>
+                <Canvas x:Name="ui_result" MouseDown="ui_result_MouseDown" Background="SeaGreen">
+                    <se:ShapeEditor x:Name="ui_shape_editor"/>
+                </Canvas>
             </Border>
         </Grid>
         <Grid Grid.Row="1">
@@ -33,12 +36,15 @@
                 <ColumnDefinition Width="100"/>
                 <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="100"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Button Grid.Column="1" x:Name="btn_load_image" Content="Load Image" Click="btn_load_image_Click"/>
             <Button Grid.Column="3" x:Name="btn_reset" Content="Reset" Click="btn_reset_Click"/>
-            <Button Grid.Column="5" x:Name="btn_crop" Content="Crop" Click="btn_crop_Click"/>
-            <Button Grid.Column="7" x:Name="btn_save" Content="Save" Click="btn_save_Click"/>
+            <Button Grid.Column="5" x:Name="btn_crop" Content="Crop" Click="btn_crop_Click" Height="30" VerticalAlignment="Top"/>
+            <Button Grid.Column="7" x:Name="btn_change_bg" Content="Background" Click="btn_change_bg_Click"/>
+            <Button Grid.Column="9" x:Name="btn_save" Content="Save" Click="btn_save_Click"/>
         </Grid>
     </Grid>
 </Window>

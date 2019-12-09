@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ namespace CropImage
     public partial class MainWindow : Window
     {
         public string m_img_path;
-        public Path m_cur_path;
+        public System.Windows.Shapes.Path m_cur_path;
         PolyLineSegment m_cur_bezier;
         public List<Point> m_cur_points = new List<Point>();
 
@@ -34,12 +35,12 @@ namespace CropImage
 
             if( e.ChangedButton == MouseButton.Left)
             {
-                Point p = e.GetPosition(ui_canvas);
+                Point p = e.GetPosition(ui_input_canvas);
 
                 // create a new path
                 if (m_cur_path == null)
                 {
-                    m_cur_path = new Path();
+                    m_cur_path = new System.Windows.Shapes.Path();
                     m_cur_path.Stroke = new SolidColorBrush(Color.FromRgb(255, 0, 0));
                     m_cur_path.StrokeThickness = 2;
                     m_cur_path.StrokeStartLineCap = PenLineCap.Round;
@@ -58,7 +59,7 @@ namespace CropImage
                     };
                     figure.Segments = new PathSegmentCollection(new PathSegment[] { m_cur_bezier });
                     m_cur_path.Data = new PathGeometry(new PathFigure[] { figure });
-                    ui_canvas.Children.Add(m_cur_path);
+                    ui_input_canvas.Children.Add(m_cur_path);
                 }
                 else 
                 {
@@ -97,7 +98,7 @@ namespace CropImage
                 if (dlg.ShowDialog().Value)
                 {
                     m_img_path = dlg.FileName;
-                    ui_canvas.Background = new ImageBrush(new BitmapImage(new Uri(m_img_path)));
+                    ui_input_canvas.Background = new ImageBrush(new BitmapImage(new Uri(m_img_path)));
                 }
             }
             catch (Exception ex)
@@ -113,32 +114,77 @@ namespace CropImage
 
         void reset()
         {
-            ui_canvas.Children.Remove(m_cur_path);
+            ui_input_canvas.Children.Remove(m_cur_path);
             m_cur_path = null;
         }
 
+        CroppedBitmap get_cropped_image(string org_path, Geometry geo)
+        {
+            ImageSource bmp = new BitmapImage(new Uri(org_path));
+            var size = new Size(bmp.Width, bmp.Height);
+            Canvas save_canvas = new Canvas();
+            save_canvas.Background = new ImageBrush(bmp);
+            var clipGeometry = geo;
+            // change the scale 
+            clipGeometry.Transform = new ScaleTransform(size.Width / ui_input_canvas.ActualWidth, size.Height / ui_input_canvas.ActualHeight);
+            save_canvas.Clip = clipGeometry;
+
+            save_canvas.Measure(size);
+            save_canvas.Arrange(new Rect(size));
+
+            RenderTargetBitmap render_bmp = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+            render_bmp.Render(save_canvas);
+
+            return new CroppedBitmap(render_bmp, new Int32Rect((int)geo.Bounds.Left, (int)geo.Bounds.Top, (int)geo.Bounds.Width, (int)geo.Bounds.Height));
+        }
         private void btn_crop_Click(object sender, RoutedEventArgs e)
         {
             if (m_img_path == "" || m_cur_path == null)
                 return;
 
-            var src_img = new BitmapImage(new Uri(m_img_path));
-            ui_result.Background = new ImageBrush(src_img);
-            var clipGeometry = m_cur_path.RenderedGeometry;
-            ui_result.Clip = clipGeometry;
+            // we create a temporary canvas and save the cropped image into a bitmap
+            var cropped_image = get_cropped_image(m_img_path, m_cur_path.RenderedGeometry);
+
+            // prepare a new image control
+            var bound = m_cur_path.RenderedGeometry.Bounds;
+            Image cropped = new Image() {
+                Stretch = Stretch.Fill,
+                Width = bound.Width,
+                Height = bound.Height,
+            };
+            Canvas.SetLeft(cropped, bound.Left);
+            Canvas.SetTop(cropped, bound.Top);
+
+            cropped.Source = cropped_image;
+            cropped.MouseDown += Cropped_MouseDown;
+            
+            // add the control with editor attached
+            ui_result.Children.Add(cropped);
+        }
+
+        private void Cropped_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            ui_shape_editor.CaptureElement(sender as FrameworkElement, e);
+            e.Handled = true;
         }
 
         private void btn_save_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                // apply the last move/resize
+                ui_shape_editor.ReleaseElement();
+
                 SaveFileDialog dlg = new SaveFileDialog();
+                dlg.FileName = "output.png";
                 dlg.Title = "Save Cropped Image File";
                 dlg.Filter = "Image files|*.jpg;*.png|All files|*.*";
                 dlg.InitialDirectory = System.IO.Directory.GetCurrentDirectory();
                 if (dlg.ShowDialog().Value)
                 {
                     var output_file = dlg.FileName;
+
+                    // render the result canvas into a file
                     var visual = ui_result;
                     var encoder = new PngBitmapEncoder();
                     RenderTargetBitmap bitmap = new RenderTargetBitmap((int)ui_result.ActualWidth, (int)ui_result.ActualHeight, 96, 96, PixelFormats.Pbgra32);
@@ -156,7 +202,30 @@ namespace CropImage
             {
                 MessageBox.Show(ex.Message + "\n" + ex.StackTrace);
             }
-            
+        }
+
+        private void btn_change_bg_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                OpenFileDialog dlg = new OpenFileDialog();
+                dlg.Title = "Open Image File";
+                dlg.Filter = "Image files|*.jpg;*.png|All files|*.*";
+                dlg.InitialDirectory = System.IO.Directory.GetCurrentDirectory();
+                if (dlg.ShowDialog().Value)
+                {
+                    ui_result.Background = new ImageBrush(new BitmapImage(new Uri(dlg.FileName)));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message + "\n" + ex.StackTrace);
+            }
+        }
+
+        private void ui_result_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            ui_shape_editor.ReleaseElement();
         }
     }
 }
