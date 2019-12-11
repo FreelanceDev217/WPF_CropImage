@@ -23,6 +23,8 @@ namespace ShapeEditor
 
         public FrameworkElement CapturedElement { get; private set; }
 
+        public int MovingMargin = -30;
+
         #endregion
 
         #region Constructor
@@ -102,12 +104,12 @@ namespace ShapeEditor
                 var parent = this.Parent as Canvas;
                 var mysPosTed = e.GetPosition(parent);
                 double x = mysPosTed.X - mysPosStart.X + objPos.X;
-                if (x >= 0 && x < parent.ActualWidth - this.ActualWidth)
+                if (x >= MovingMargin && x < parent.ActualWidth - this.ActualWidth - MovingMargin)
                 {
                     Canvas.SetLeft(this, x);
                 }
                 double y = mysPosTed.Y - mysPosStart.Y + objPos.Y;
-                if (y >= 0 && y < parent.ActualHeight - this.ActualHeight)
+                if (y >= MovingMargin && y < parent.ActualHeight - this.ActualHeight - MovingMargin)
                 {
                     Canvas.SetTop(this, y);
                 }

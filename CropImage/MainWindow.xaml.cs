@@ -24,6 +24,43 @@ namespace CropImage
         PolyLineSegment m_cur_bezier;
         public List<Point> m_cur_points = new List<Point>();
 
+        Point m_smudge_start;
+        Point m_smudge_end;
+
+        Ellipse m_brush_tip = new Ellipse()
+        {
+            Stroke = Brushes.Tomato,
+            StrokeThickness = 2
+        };
+
+        private bool _smudge_mode;
+        public bool SmudgeMode
+        {
+            get
+            {
+                return _smudge_mode;
+            }
+            set
+            {
+                _smudge_mode = value;
+            }
+        }
+        private double _brush_radius;
+        public double BrushRadius
+        {
+            get
+            {
+                return _brush_radius;
+            }
+
+            set
+            {
+                _brush_radius = value;
+                m_brush_tip.Width = value * 2;
+                m_brush_tip.Height = value * 2;
+            }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -157,15 +194,33 @@ namespace CropImage
 
             cropped.Source = cropped_image;
             cropped.MouseDown += Cropped_MouseDown;
+            cropped.MouseMove += Cropped_MouseMove;
             
             // add the control with editor attached
             ui_result.Children.Add(cropped);
         }
 
+        private void Cropped_MouseMove(object sender, MouseEventArgs e)
+        {
+            if(SmudgeMode && e.LeftButton == MouseButtonState.Pressed)
+            {
+                Image image = sender as Image;
+                m_smudge_end = e.GetPosition(image);
+                image.Source = smudge_image(image.Source, m_smudge_start, m_smudge_end, BrushRadius);
+            }
+        }
+
         private void Cropped_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            ui_shape_editor.CaptureElement(sender as FrameworkElement, e);
-            e.Handled = true;
+            if (SmudgeMode == false)
+            {
+                ui_shape_editor.CaptureElement(sender as FrameworkElement, e);
+                e.Handled = true;
+            }
+            else
+            {
+                m_smudge_start = e.GetPosition((IInputElement)sender);
+            }
         }
 
         private void btn_save_Click(object sender, RoutedEventArgs e)
@@ -224,6 +279,57 @@ namespace CropImage
         }
 
         private void ui_result_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if(SmudgeMode == false)
+                ui_shape_editor.ReleaseElement();
+        }
+
+        ImageSource smudge_image(ImageSource image, Point start, Point end, double R)
+        {
+            var result = image;
+            return result;
+        }
+
+        private void ui_result_MouseMove(object sender, MouseEventArgs e)
+        {
+            if(SmudgeMode)
+            {
+                var pos = e.GetPosition(ui_result);
+                if (pos.X - BrushRadius >= 0 && pos.Y - BrushRadius >= 0 && pos.X + BrushRadius < ui_result.ActualWidth && pos.Y + BrushRadius < ui_result.ActualHeight)
+                {
+                    m_brush_tip.Visibility = Visibility.Visible;
+                    Canvas.SetLeft(m_brush_tip, pos.X - BrushRadius);
+                    Canvas.SetTop(m_brush_tip, pos.Y - BrushRadius);
+                }
+                else
+                {
+                    m_brush_tip.Visibility = Visibility.Hidden;
+                }
+            }
+        }
+
+        private void ui_result_canvas_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (SmudgeMode)
+            {
+                ui_result.Children.Add(m_brush_tip);
+            }
+        }
+
+        private void ui_result_canvas_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (SmudgeMode)
+            {
+                ui_result.Children.Remove(m_brush_tip);
+            }
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            BrushRadius = ui_radius.Minimum;
+        }
+
+        private void btn_smudge_Checked(object sender, RoutedEventArgs e)
         {
             ui_shape_editor.ReleaseElement();
         }
