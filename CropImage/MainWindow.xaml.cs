@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
+
 namespace CropImage
 {
     public partial class MainWindow : Window
@@ -22,14 +23,15 @@ namespace CropImage
         public string m_img_path;
         public System.Windows.Shapes.Path m_cur_path;
         PolyLineSegment m_cur_bezier;
-        public List<Point> m_cur_points = new List<Point>();
+        public List<System.Windows.Point> m_cur_points = new List<System.Windows.Point>();
 
         Point m_smudge_start;
         Point m_smudge_end;
 
+
         Ellipse m_brush_tip = new Ellipse()
         {
-            Stroke = Brushes.Tomato,
+            Stroke = System.Windows.Media.Brushes.Tomato,
             StrokeThickness = 2
         };
 
@@ -72,13 +74,13 @@ namespace CropImage
 
             if( e.ChangedButton == MouseButton.Left)
             {
-                Point p = e.GetPosition(ui_input_canvas);
+                System.Windows.Point p = e.GetPosition(ui_input_canvas);
 
                 // create a new path
                 if (m_cur_path == null)
                 {
                     m_cur_path = new System.Windows.Shapes.Path();
-                    m_cur_path.Stroke = new SolidColorBrush(Color.FromRgb(255, 0, 0));
+                    m_cur_path.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 0));
                     m_cur_path.StrokeThickness = 2;
                     m_cur_path.StrokeStartLineCap = PenLineCap.Round;
                     m_cur_path.StrokeEndLineCap = PenLineCap.Round;
@@ -158,7 +160,7 @@ namespace CropImage
         CroppedBitmap get_cropped_image(string org_path, Geometry geo)
         {
             ImageSource bmp = new BitmapImage(new Uri(org_path));
-            var size = new Size(bmp.Width, bmp.Height);
+            var size = new System.Windows.Size(bmp.Width, bmp.Height);
             Canvas save_canvas = new Canvas();
             save_canvas.Background = new ImageBrush(bmp);
             var clipGeometry = geo;
@@ -184,7 +186,7 @@ namespace CropImage
 
             // prepare a new image control
             var bound = m_cur_path.RenderedGeometry.Bounds;
-            Image cropped = new Image() {
+            System.Windows.Controls.Image cropped = new System.Windows.Controls.Image() {
                 Stretch = Stretch.Fill,
                 Width = bound.Width,
                 Height = bound.Height,
@@ -199,14 +201,17 @@ namespace CropImage
             // add the control with editor attached
             ui_result.Children.Add(cropped);
         }
-
-        private void Cropped_MouseMove(object sender, MouseEventArgs e)
+       
+        private unsafe void Cropped_MouseMove(object sender, MouseEventArgs e)
         {
-            if(SmudgeMode && e.LeftButton == MouseButtonState.Pressed)
+            if (SmudgeMode && e.LeftButton == MouseButtonState.Pressed)
             {
-                Image image = sender as Image;
-                m_smudge_end = e.GetPosition(image);
-                image.Source = smudge_image(image.Source, m_smudge_start, m_smudge_end, BrushRadius);
+                System.Windows.Controls.Image image = sender as System.Windows.Controls.Image;
+                var location = e.GetPosition(image);
+                var croppedControl = sender as Image;
+                m_smudge_end = new Point(location.X / croppedControl.Width, location.Y / croppedControl.Height);
+                image.Source = Smudge.smudge_image(image.Source, m_smudge_start, m_smudge_end, BrushRadius / croppedControl.Width);
+                m_smudge_start = m_smudge_end;
             }
         }
 
@@ -219,7 +224,9 @@ namespace CropImage
             }
             else
             {
-                m_smudge_start = e.GetPosition((IInputElement)sender);
+                Point location = e.GetPosition((IInputElement)sender);
+                var croppedControl = sender as Image;
+                m_smudge_start = new Point(location.X / croppedControl.Width, location.Y / croppedControl.Height);
             }
         }
 
@@ -284,11 +291,7 @@ namespace CropImage
                 ui_shape_editor.ReleaseElement();
         }
 
-        ImageSource smudge_image(ImageSource image, Point start, Point end, double R)
-        {
-            var result = image;
-            return result;
-        }
+        
 
         private void ui_result_MouseMove(object sender, MouseEventArgs e)
         {
