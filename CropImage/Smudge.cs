@@ -53,7 +53,7 @@ namespace CropImage
             int width = (int)image.Width;
             int height = (int)image.Height;
 
-            Bitmap bmp = PCKLIB.ImgUtility.GetWinformBitmapFromBinary(buffer, width, height);
+            //Bitmap bmp = PCKLIB.ImgUtility.GetWinformBitmapFromBinary(buffer, width, height);
             //bmp.Save("out.png");
 
             //File.WriteAllText("out.txt", $"{start}->{end}");

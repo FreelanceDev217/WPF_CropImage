@@ -89,9 +89,11 @@ namespace PCKLIB
 
         public static byte[] GetBinaryFromWpfBmpSource(System.Windows.Media.Imaging.BitmapSource srcBitmap)
         {
-           System.Drawing.Bitmap bmp = GetWinformBitmap(srcBitmap);
-           byte[] bin = GetBinaryFromWinformBitmap(bmp);
-           return bin;
+            
+            int stride = (srcBitmap.PixelWidth * (srcBitmap.Format.BitsPerPixel / 8));
+            byte[] bin = new byte[srcBitmap.PixelHeight * stride];
+            srcBitmap.CopyPixels(bin, stride, 0);           
+            return bin;
         }
 
         public static BitmapSource GetWpfBmpSourceFromBinary(byte[] binaryData, int w, int h)
